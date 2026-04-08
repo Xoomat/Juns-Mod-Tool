@@ -1,0 +1,13 @@
+{
+  "name": "mdrg-modtool-ide",
+  "version": "0.1.0",
+  "description": "Electron IDE for My Dystopian Robot Girlfriend mods",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "node ./scripts/build.js"
+  },
+  "devDependencies": {
+    "electron": "^36.2.1"
+  }
+}
