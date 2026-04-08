@@ -17,7 +17,7 @@ Electron-based IDE for creating and managing mods for My Dystopian Robot Girlfri
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/Xoomat/Juns-Mod-Tool
 cd Juns-Mod-Tool
 ```
 
