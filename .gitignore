@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Build artifacts
+dist/
+out/
+build/
+
+# Local development
+.env
+.env.local
+*.local
+
+# User mods and translations (local workspace)
+mods/
+bin/
+
+# Build output and temp files
+*.exe
+*.dll
+dist-*
