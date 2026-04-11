@@ -1,0 +1,47 @@
+{
+  "name": "mods-translator",
+  "version": "1.0.0",
+  "description": "Translation tool for MDRG mods",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --launch-key=Ig70ZwMbfpdkPaautsL3YmxJWvfoMezG44OZs0Zxh9wQ9REbd66Y7JnC30uZ9On9WSPtmDoHPJkBotYTFPN6vhFaoqv3AMOh3tsr",
+    "dev": "electron . --launch-key=Ig70ZwMbfpdkPaautsL3YmxJWvfoMezG44OZs0Zxh9wQ9REbd66Y7JnC30uZ9On9WSPtmDoHPJkBotYTFPN6vhFaoqv3AMOh3tsr",
+    "build": "electron-builder"
+  },
+  "keywords": ["translator", "mods"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "com.example.mods-translator",
+    "productName": "Translator",
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "main.js",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

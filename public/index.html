@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MDRG Mods Translator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <div class="panel-header">
+        <h2>Translations</h2>
+        <button id="newModBtn" class="btn-icon" title="Create new mod translation folder">
+          New
+        </button>
+      </div>
+
+      <div class="mod-list" id="modList">
+        <p class="placeholder">Loading...</p>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="panel-header">
+        <h2 id="fileTitle">Select a translation file</h2>
+        <button id="saveBtn" class="btn-primary" disabled>Save</button>
+      </div>
+
+      <div id="editorContainer" class="editor-container">
+        <p class="placeholder">Select a translation file to start editing</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="newModDialog" class="dialog hidden">
+    <div class="dialog-content">
+      <h3>Create New Mod Translation</h3>
+      <input
+        id="newModInput"
+        type="text"
+        placeholder="Enter mod folder name (e.g., 'My Awesome Mod')"
+      />
+      <div class="dialog-buttons">
+        <button id="newModCancel" class="btn-secondary">Cancel</button>
+        <button id="newModCreate" class="btn-primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="successMessage" class="success-message hidden">
+    Saved successfully!
+  </div>
+
+  <script src="../src/renderer.js"></script>
+</body>
+</html>
