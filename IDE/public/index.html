@@ -206,25 +206,48 @@
                     <span>Partners</span>
                     <input name="partners" class="field__input" />
                   </label>
-                  <label class="field">
-                    <span>Color slots</span>
-                    <input name="colorSlots" class="field__input" />
-                  </label>
-                  <label class="field">
-                    <span>Color palette</span>
-                    <input name="colorPalette" class="field__input" value="partpalette" />
-                  </label>
+                  <div class="color-slot-panel texture-panel field field--wide">
+                    <div class="panel__title panel__title--row panel__title--nested">
+                      <span>Color Slots</span>
+                      <button id="addColorSlotButton" type="button" class="toolbar-button">Add Color Slot</button>
+                    </div>
+                    <div id="colorSlotsContainer" class="color-slot-list texture-list"></div>
+                  </div>
                   <label class="field">
                     <span>Sus modifiers</span>
                     <input name="susModifiers" class="field__input" />
                   </label>
 
                   <div class="toggle-row field field--wide">
-                    <label><input name="isIllegal" type="checkbox" /> Illegal</label>
-                    <label><input name="hasQuality" type="checkbox" /> Quality</label>
-                    <label><input name="isStackable" type="checkbox" /> Stackable</label>
-                    <label><input name="canChangeColor" type="checkbox" checked /> Color</label>
-                    <label><input name="throwingOutForbidden" type="checkbox" /> Throw out forbidden</label>
+                    <label class="checkbox">
+                      <input name="isIllegal" type="checkbox" />
+                      <span class="checkbox__box"></span>
+                      <span class="checkbox__label">Is Illegal?</span>
+                    </label>
+
+                    <label class="checkbox">
+                      <input name="hasQuality" type="checkbox" />
+                      <span class="checkbox__box"></span>
+                      <span class="checkbox__label">Has Quality?</span>
+                    </label>
+
+                    <label class="checkbox">
+                      <input name="isStackable" type="checkbox" />
+                      <span class="checkbox__box"></span>
+                      <span class="checkbox__label">Is Stackable?</span>
+                    </label>
+
+                    <label class="checkbox">
+                      <input name="canChangeColor" type="checkbox" checked />
+                      <span class="checkbox__box"></span>
+                      <span class="checkbox__label">Can Change Color?</span>
+                    </label>
+
+                    <label class="checkbox">
+                      <input name="throwingOutForbidden" type="checkbox" />
+                      <span class="checkbox__box"></span>
+                      <span class="checkbox__label">Throw out forbidden</span>
+                    </label>
                   </div>
 
                   <div class="texture-panel field field--wide">
@@ -314,13 +337,19 @@
         </div>
         <form id="settingsForm" class="modal__form">
           <label class="field">
-            <span>Language</span>
+            <span data-i18n="settings_language">Language</span>
             <select id="settingsLanguageSelect" class="field__select"></select>
           </label>
+          <label class="field">
+            <span data-i18n="settings_autosave">Auto-save</span>
+              <input id="settingsAutoSaveCheckbox" type="checkbox" checked />
+              <span data-i18n="settings_autosave_hint">(Saves every 5 minutes)</span>
+            </label>
+
           <div class="modal__hint"></div>
           <div class="modal__actions">
-            <button id="saveSettingsButton" type="submit" class="toolbar-button toolbar-button--primary">Save</button>
-            <button id="cancelSettingsButton" type="button" class="toolbar-button">Close</button>
+            <button id="saveSettingsButton" type="submit" class="toolbar-button toolbar-button--primary" data-i18n="settings_save">Save</button>
+            <button id="cancelSettingsButton" type="button" class="toolbar-button" data-i18n="settings_close">Close</button>
           </div>
         </form>
       </div>

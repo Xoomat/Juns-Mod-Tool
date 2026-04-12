@@ -37,7 +37,14 @@ const state = {
   contextMenuItemId: null,
   languagePacks: [],
   currentLanguage: "en",
-  refreshTimer: null
+  refreshTimer: null,
+  settings: {
+    autoSaveEnabled: true,
+    autoSaveInterval: 300000
+  },
+  autoSaveTimer: null,
+  searchQuery: "",
+  searchReplaceMode: false
 };
 
 const elements = {
@@ -55,6 +62,7 @@ const elements = {
   menuRedo: document.getElementById("menuRedo"),
   menuViewMods: document.getElementById("menuViewMods"),
   menuViewExplorer: document.getElementById("menuViewExplorer"),
+  // menuCheckUpdates removed
   activityModsButton: document.getElementById("activityModsButton"),
   activityExplorerButton: document.getElementById("activityExplorerButton"),
   settingsButton: document.getElementById("settingsButton"),
@@ -99,6 +107,8 @@ const elements = {
   texturesContainer: document.getElementById("texturesContainer"),
   addTextureButton: document.getElementById("addTextureButton"),
   equipmentSlots: document.getElementById("equipmentSlots"),
+  colorSlotsContainer: document.getElementById("colorSlotsContainer"),
+  addColorSlotButton: document.getElementById("addColorSlotButton"),
   createModal: document.getElementById("createModal"),
   createModForm: document.getElementById("createModForm"),
   closeCreateModalButton: document.getElementById("closeCreateModalButton"),
@@ -114,6 +124,7 @@ const elements = {
   settingsModal: document.getElementById("settingsModal"),
   settingsForm: document.getElementById("settingsForm"),
   settingsLanguageSelect: document.getElementById("settingsLanguageSelect"),
+  settingsAutoSaveCheckbox: document.getElementById("settingsAutoSaveCheckbox"),
   closeSettingsModalButton: document.getElementById("closeSettingsModalButton"),
   cancelSettingsButton: document.getElementById("cancelSettingsButton"),
   statusBox: document.getElementById("statusBox"),
@@ -143,6 +154,292 @@ function splitCsv(value) {
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+async function startAutoSave() {
+  if (!state.settings.autoSaveEnabled) {
+    return;
+  }
+
+  if (state.autoSaveTimer) {
+    clearInterval(state.autoSaveTimer);
+  }
+
+  state.autoSaveTimer = setInterval(async () => {
+    const tab = getActiveTabData();
+    if (tab && state.dirtyTabs.has(tab.id)) {
+      try {
+        syncMetaIntoState();
+        syncEditorIntoState();
+        await window.modTool.saveMod({
+          directoryName: tab.summary.directoryName,
+          modJson: tab.modJson,
+          luaFiles: tab.luaFiles
+        });
+        markTabDirty(tab.id, false);
+        setStatus("Auto-saved successfully", "success");
+      } catch (error) {
+        setStatus(`Auto-save failed: ${error.message}`, "error");
+      }
+    }
+  }, state.settings.autoSaveInterval);
+}
+
+function stopAutoSave() {
+  if (state.autoSaveTimer) {
+    clearInterval(state.autoSaveTimer);
+    state.autoSaveTimer = null;
+  }
+}
+
+async function loadSettings() {
+  try {
+    const settings = await window.modTool.readSettings();
+    state.settings = {
+      ...state.settings,
+      ...settings
+    };
+
+  } catch (error) {
+    console.error("Failed to load settings:", error);
+  }
+}
+
+function performSearch(query, matchCase = false) {
+  const currentFile = getCurrentLuaFile();
+  if (!currentFile) return [];
+
+  const content = currentFile.content;
+  const pattern = matchCase ? query : query.toLowerCase();
+  const contentToSearch = matchCase ? content : content.toLowerCase();
+  
+  const matches = [];
+  let startIndex = 0;
+
+  while (true) {
+    const index = contentToSearch.indexOf(pattern, startIndex);
+    if (index === -1) break;
+    
+    const lineStart = content.lastIndexOf("\n", index) + 1;
+    const lineEnd = content.indexOf("\n", index);
+    const lineNumber = content.substring(0, index).split("\n").length;
+    const lineContent = content.substring(lineStart, lineEnd === -1 ? undefined : lineEnd);
+    
+    matches.push({
+      index,
+      lineNumber,
+      lineContent,
+      column: index - lineStart
+    });
+    
+    startIndex = index + 1;
+  }
+
+  return matches;
+}
+
+function performReplace(query, replacement, matchCase = false, replaceAll = false) {
+  const currentFile = getCurrentLuaFile();
+  if (!currentFile) return 0;
+
+  const flags = matchCase ? "g" : "gi";
+  const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), flags);
+  const originalContent = currentFile.content;
+  
+  let replaced = 0;
+  if (replaceAll) {
+    const newContent = originalContent.replace(regex, (match) => {
+      replaced++;
+      return replacement;
+    });
+    currentFile.content = newContent;
+  } else {
+    if (originalContent.match(regex)) {
+      currentFile.content = originalContent.replace(regex, replacement);
+      replaced = 1;
+    }
+  }
+
+  if (replaced > 0) {
+    markTabDirty(state.activeTab, true);
+    renderLuaEditor();
+  }
+
+  return replaced;
+}
+
+async function validateCurrentMod() {
+  const tab = getActiveTabData();
+  if (!tab) {
+    setStatus("No mod selected", "error");
+    return;
+  }
+
+  try {
+    const validation = await window.modTool.validateMod(tab.summary.id);
+    
+    if (validation.isValid) {
+      setStatus("✓ Mod validation passed", "success");
+    } else {
+      const errorList = validation.errors.join("\n");
+      alert(`Validation failed:\n${errorList}`);
+      setStatus("✗ Validation failed", "error");
+    }
+
+    if (validation.warnings.length > 0) {
+      console.warn("Mod warnings:", validation.warnings);
+    }
+  } catch (error) {
+    setStatus(`Validation error: ${error.message}`, "error");
+  }
+}
+
+function getModStats() {
+  const tab = getActiveTabData();
+  if (!tab) return null;
+
+  const summary = tab.summary;
+  const totalLuaLines = tab.luaFiles.reduce((sum, f) => sum + (f.content?.split("\n").length || 0), 0);
+  
+  return {
+    modName: summary.name,
+    guid: summary.id,
+    luaFileCount: summary.luaFileCount,
+    totalLuaLines,
+    textureJsonCount: summary.textureJsonCount,
+    pngCount: summary.pngCount,
+    psdCount: summary.psdCount,
+    storageStatus: summary.storageStatus,
+    description: summary.description,
+    targetVersion: summary.targetVersion
+  };
+}
+
+function setupKeyboardShortcuts() {
+  document.addEventListener("keydown", (event) => {
+    const isMeta = event.ctrlKey || event.metaKey;
+    const isShift = event.shiftKey;
+
+    // Ctrl+S - Save
+    if (isMeta && event.key === "s") {
+      event.preventDefault();
+      const tab = getActiveTabData();
+      if (tab) {
+        saveTabById(tab.id);
+      }
+      return;
+    }
+
+    // Ctrl+Shift+S - Validate
+    if (isMeta && isShift && event.key === "S") {
+      event.preventDefault();
+      validateCurrentMod();
+      return;
+    }
+
+    // Ctrl+H - Open Find/Replace
+    if (isMeta && event.key === "h") {
+      event.preventDefault();
+      openFindReplace();
+      return;
+    }
+
+    // Ctrl+F - Open Find
+    if (isMeta && event.key === "f") {
+      event.preventDefault();
+      openFind();
+      return;
+    }
+
+    // Ctrl+G - Go to Line
+    if (isMeta && event.key === "g") {
+      event.preventDefault();
+      goToLine();
+      return;
+    }
+
+    // Ctrl+Z - Undo
+    if (isMeta && event.key === "z") {
+      event.preventDefault();
+      undoActiveTab();
+      renderAll();
+      return;
+    }
+
+    // Ctrl+Shift+Z or Ctrl+Y - Redo
+    if ((isMeta && isShift && event.key === "z") || (isMeta && event.key === "y")) {
+      event.preventDefault();
+      redoActiveTab();
+      renderAll();
+      return;
+    }
+  });
+}
+
+function openFind() {
+  state.searchReplaceMode = false;
+  showSearchDialog(false);
+}
+
+function openFindReplace() {
+  state.searchReplaceMode = true;
+  showSearchDialog(true);
+}
+
+function showSearchDialog(showReplace = false) {
+  const query = prompt(showReplace ? "Find text:" : "Find text:");
+  if (!query) return;
+
+  if (showReplace) {
+    const replacement = prompt("Replace with:");
+    if (replacement === null) return;
+
+    const count = performReplace(query, replacement, false, true);
+    setStatus(`Replaced ${count} occurrence${count !== 1 ? "s" : ""}.`, "success");
+  } else {
+    const matches = performSearch(query, false);
+    if (matches.length > 0) {
+      setStatus(`Found ${matches.length} match${matches.length !== 1 ? "es" : ""}.`, "success");
+      // Highlight first match
+      if (elements.luaEditor.value.includes(query)) {
+        const index = elements.luaEditor.value.toLowerCase().indexOf(query.toLowerCase());
+        elements.luaEditor.setSelectionRange(index, index + query.length);
+        elements.luaEditor.focus();
+      }
+    } else {
+      setStatus("No matches found.", "warning");
+    }
+  }
+}
+
+function goToLine() {
+  const currentFile = getCurrentLuaFile();
+  if (!currentFile) {
+    setStatus("No Lua file selected", "warning");
+    return;
+  }
+
+  const lineStr = prompt(`Go to line (1-${currentFile.content.split("\n").length}):`);
+  if (!lineStr) return;
+
+  const lineNum = parseInt(lineStr, 10);
+  const lines = currentFile.content.split("\n");
+
+  if (lineNum < 1 || lineNum > lines.length) {
+    setStatus(`Line ${lineNum} is out of range`, "warning");
+    return;
+  }
+
+  // Find position in editor
+  let pos = 0;
+  for (let i = 0; i < lineNum - 1; i++) {
+    pos += lines[i].length + 1;
+  }
+
+  elements.luaEditor.setSelectionRange(pos, pos);
+  elements.luaEditor.focus();
+  elements.luaEditor.scrollTop = (lineNum - 1) * 16; // Approximate line height
+  setStatus(`Jumped to line ${lineNum}`, "success");
 }
 
 function generateGuid() {
@@ -300,8 +597,7 @@ function createDefaultManagedItem() {
     forbiddenSlots: [],
     throwingOutForbidden: false,
     partners: [],
-    colorSlots: [],
-    colorPalette: "partpalette",
+  colorSlots: [], // Array of {slotName, paletteName}
     susModifiers: [],
     textures: [],
     isIllegal: false,
@@ -388,11 +684,12 @@ function parseManagedItemsFromLua(content) {
       item.forbiddenSlots = forbiddenMatch ? parseLuaStringArray(forbiddenMatch[1]) : [];
     }
 
-    const colorSlotMatches = [...body.matchAll(/ColorSlot\.CreateInstance\('([^']*)',\s*ColorPaletteManager\.GetColorPaletteByName\('([^']*)'\)\)/g)];
-    item.colorSlots = colorSlotMatches.map((entry) => entry[1]);
-    if (colorSlotMatches[0]) {
-      item.colorPalette = colorSlotMatches[0][2];
-    }
+const colorSlotMatches = [...body.matchAll(/ColorSlot\.CreateInstance\('([^']*)',\s*ColorPaletteManager\.GetColorPaletteByName\('([^']*)'\)\)/g)];
+    item.colorSlots = colorSlotMatches.map((entry) => ({
+      slotName: entry[1],
+      paletteName: entry[2]
+    }));
+    item.colorPalette = "partpalette"; // default
 
     item.susModifiers = [...body.matchAll(/SusModifier\.CreateInstance\(SusArea\.([A-Za-z0-9_]+),\s*([0-9.]+)\)/g)]
       .map((entry) => ({ area: entry[1], value: Number(entry[2]) }));
@@ -634,6 +931,32 @@ function renderTextureRows(textures) {
   }
 }
 
+function renderColorSlotRows(colorSlots = []) {
+  elements.colorSlotsContainer.innerHTML = "";
+  for (const cs of colorSlots) {
+    const row = document.createElement("div");
+    row.className = "texture-row"; // reuse style
+    row.innerHTML = `
+      <label class="field">
+        <span>Slot Name</span>
+        <input class="field__input color-slot-name" value="${escapeHtml(cs.slotName || cs || "")}" />
+      </label>
+      <label class="field">
+        <span>Palette</span>
+        <input class="field__input color-slot-palette" value="${escapeHtml(cs.paletteName || "partpalette")}" />
+      </label>
+      <button type="button" class="toolbar-button toolbar-button--danger" data-remove-color-slot>Remove</button>
+    `;
+    elements.colorSlotsContainer.append(row);
+  }
+
+  for (const removeButton of elements.colorSlotsContainer.querySelectorAll("[data-remove-color-slot]")) {
+    removeButton.addEventListener("click", () => {
+      removeButton.closest(".texture-row")?.remove();
+    });
+  }
+}
+
 function loadManagedItemIntoForm(item) {
   const form = elements.generatorForm;
   form.elements.sourceMode.value = item.sourceMode || "create";
@@ -651,8 +974,7 @@ function loadManagedItemIntoForm(item) {
   form.elements.controllerElementOverride.value = (item.controllerElementOverride || []).join(", ");
   form.elements.forbiddenSlots.value = (item.forbiddenSlots || []).join(", ");
   form.elements.partners.value = (item.partners || []).join(", ");
-  form.elements.colorSlots.value = (item.colorSlots || []).join(", ");
-  form.elements.colorPalette.value = item.colorPalette || "partpalette";
+  renderColorSlotRows(item.colorSlots || []);
   form.elements.susModifiers.value = (item.susModifiers || []).map((entry) => `${entry.area}:${entry.value}`).join(", ");
   form.elements.isIllegal.checked = Boolean(item.isIllegal);
   form.elements.hasQuality.checked = Boolean(item.hasQuality);
@@ -686,8 +1008,10 @@ function collectManagedItemFromForm(existingId = null) {
     forbiddenSlots: splitCsv(formData.get("forbiddenSlots")),
     throwingOutForbidden: formData.get("throwingOutForbidden") === "on",
     partners: splitCsv(formData.get("partners")),
-    colorSlots: splitCsv(formData.get("colorSlots")),
-    colorPalette: String(formData.get("colorPalette") || "partpalette").trim(),
+    colorSlots: Array.from(elements.colorSlotsContainer.querySelectorAll(".texture-row")).map((row) => ({
+      slotName: row.querySelector(".color-slot-name").value.trim(),
+      paletteName: row.querySelector(".color-slot-palette").value.trim()
+    })).filter(cs => cs.slotName),
     susModifiers: splitCsv(formData.get("susModifiers"))
       .map((entry) => {
         const [area, value] = entry.split(":").map((part) => part.trim());
@@ -1212,6 +1536,13 @@ async function saveTabById(tabId) {
     syncEditorIntoState();
   }
 
+  try {
+    // Create backup before saving
+    await window.modTool.createModBackup(tab.summary.directoryName);
+  } catch (error) {
+    console.warn("Backup creation failed:", error);
+  }
+
   const savedMod = await window.modTool.saveMod({
     directoryName: tab.summary.directoryName,
     modJson: tab.modJson,
@@ -1393,11 +1724,22 @@ async function loadLanguageSettings() {
 
   state.languagePacks = packs;
   state.currentLanguage = settings?.language || "en";
+  
+  // Load all settings
+  state.settings = {
+    ...state.settings,
+    ...settings
+  };
 
+  // Populate language dropdown
   elements.settingsLanguageSelect.innerHTML = packs.map((pack) => {
     const selected = pack.code === state.currentLanguage ? " selected" : "";
     return `<option value="${escapeHtml(pack.code)}"${selected}>${escapeHtml(pack.name)}</option>`;
   }).join("");
+
+  if (elements.settingsAutoSaveCheckbox) {
+    elements.settingsAutoSaveCheckbox.checked = state.settings.autoSaveEnabled !== false;
+  }
 
   applyLanguageToUI();
 }
@@ -1405,12 +1747,21 @@ async function loadLanguageSettings() {
 async function saveSettingsFromModal(event) {
   event.preventDefault();
   const language = elements.settingsLanguageSelect.value || "en";
+  const autoSaveEnabled = elements.settingsAutoSaveCheckbox?.checked ?? true;
+
   await window.modTool.saveSettings({
     language,
-    version: "1.0.0"
+    autoSaveEnabled,
+    autoSaveInterval: 300000
   });
+
   state.currentLanguage = language;
+  state.settings.autoSaveEnabled = autoSaveEnabled;
+  
   applyLanguageToUI();
+  stopAutoSave();
+  startAutoSave();
+  
   closeSettingsModal();
   setStatus(getCurrentTranslations().settingsSaved || "Settings saved.", "success");
 }
@@ -1652,6 +2003,15 @@ function bindEvents() {
     renderTextureRows(currentTextures);
   });
 
+  elements.addColorSlotButton.addEventListener("click", () => {
+    const currentColorSlots = Array.from(elements.colorSlotsContainer.querySelectorAll(".texture-row")).map((row) => ({
+      slotName: row.querySelector(".color-slot-name").value.trim(),
+      paletteName: row.querySelector(".color-slot-palette").value.trim()
+    })).filter(cs => cs.slotName);
+    currentColorSlots.push({ slotName: "", paletteName: "partpalette" });
+    renderColorSlotRows(currentColorSlots);
+  });
+
   elements.createModForm.addEventListener("submit", handleCreateMod);
   elements.closeCreateModalButton.addEventListener("click", closeCreateModal);
   elements.closeCreateModalButton2.addEventListener("click", closeCreateModal);
@@ -1798,11 +2158,15 @@ function bindEvents() {
 async function boot() {
   populateStaticOptions();
   bindEvents();
+  setupKeyboardShortcuts();
   state.paths = await window.modTool.getPaths();
+  await loadSettings();
   await loadLanguageSettings();
   await refreshMods();
   renderAll();
   updateDocumentTitle();
+  startAutoSave();
+  
   setStatus("Workspace loaded.");
 }
 

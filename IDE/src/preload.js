@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld("modTool", {
   readSettings: () => ipcRenderer.invoke("app:read-settings"),
   saveSettings: (settings) => ipcRenderer.invoke("app:save-settings", settings),
   listLanguages: () => ipcRenderer.invoke("app:list-languages"),
+  validateMod: (modGuid) => ipcRenderer.invoke("mods:validate", modGuid),
+  createModBackup: (modGuid) => ipcRenderer.invoke("mods:backup", modGuid),
   onModsChanged: (callback) => {
     ipcRenderer.removeAllListeners("mods:changed");
     ipcRenderer.on("mods:changed", callback);

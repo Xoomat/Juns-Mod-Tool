@@ -1,7 +1,8 @@
 {
   "name": "mdrg-modtools-ide",
-  "version": "0.1.0",
+  "version": "1.2.8",
   "description": "IDE for My Dystopian Robot Girlfriend mods",
+  "author": "Xoomat",
   "main": "main.js",
   "scripts": {
     "start": "electron . --launch-key=76vDS0AHUpdLOwqa3RYCkpdaHIOJVI61wj5ejdUz8bmzddNPU9dbOsoIcDUUaZbKtaRGnTGDwmJflfap7rHB3FV9Cy8hlPJR6bRN",

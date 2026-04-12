@@ -16,7 +16,10 @@
   --shadow: rgba(0, 0, 0, 0.35);
   --font-ui: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   --font-code: "Cascadia Code", "Consolas", monospace;
+  --font-size-base: 12px;
 }
+
+/* Single dark theme - light theme removed */
 
 * {
   box-sizing: border-box;
@@ -30,7 +33,7 @@ body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font: 12px/1.4 var(--font-ui);
+  font: var(--font-size-base)/1.4 var(--font-ui);
 }
 
 button,
@@ -587,6 +590,66 @@ button {
   align-items: center;
 }
 
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.checkbox input {
+  display: none;
+}
+
+.checkbox__box {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  background: #1a1a1a;
+  display: inline-block;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.checkbox:hover .checkbox__box {
+  border-color: var(--text-muted);
+  background: #222;
+}
+
+.checkbox input:checked + .checkbox__box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.checkbox__box::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.12s ease;
+}
+
+.checkbox input:checked + .checkbox__box::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.checkbox__label {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.checkbox input:disabled + .checkbox__box {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .texture-panel {
   border: 1px solid var(--border);
 }
@@ -689,6 +752,61 @@ button {
 
 .modal__hint code {
   color: var(--text);
+}
+
+/* Settings Tabs */
+.settings-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex: 1;
+}
+
+.settings-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9em;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.settings-panel {
+  display: none;
+}
+
+.settings-panel--active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-update-section {
+  padding: 8px 0;
+}
+
+.settings-update-section h3 {
+  margin: 0 0 4px 0;
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+.settings-update-section p {
+  margin: 0 0 8px 0;
+  font-size: 0.85em;
+  color: var(--text-muted);
 }
 
 .context-menu,

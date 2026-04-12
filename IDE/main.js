@@ -12,7 +12,9 @@ let modsWatcher = null;
 
 const DEFAULT_SETTINGS = {
   language: "en",
-  xq: "zero"
+  xq: "zero",
+  autoSaveEnabled: true,
+  autoSaveInterval: 300000
 };
 
 const LANGUAGE_PACKS = {
@@ -710,6 +712,82 @@ async function listLanguagePacks() {
   return customPacks;
 }
 
+async function validateMod(modGuid) {
+  const { modsRoot } = await ensureWorkspace();
+  const modPaths = getModPaths(modsRoot, modGuid);
+  const errors = [];
+  const warnings = [];
+
+  // Check if unpack folder exists
+  const hasUnpack = await pathExists(modPaths.unpackPath);
+  if (!hasUnpack) {
+    errors.push("Mod is not unpacked");
+    return { errors, warnings, isValid: false };
+  }
+
+  // Check for mod.json
+  const modJsonPath = path.join(modPaths.unpackPath, "mod.json");
+  const hasModJson = await pathExists(modJsonPath);
+  if (!hasModJson) {
+    errors.push("mod.json not found");
+    return { errors, warnings, isValid: false };
+  }
+
+  const modJson = await readJson(modJsonPath, {});
+
+  // Validate mod.json structure
+  if (!modJson.name || typeof modJson.name !== "string") {
+    errors.push("Mod name is missing or invalid");
+  }
+  if (!modJson.doNotChangeVariablesBelowThis?.guid?.serializedGuid) {
+    errors.push("Mod GUID is invalid or missing");
+  }
+
+  // Check for Lua files
+  const luaFiles = await getLuaFilesFromFolder(modPaths.unpackPath, modJson);
+  if (luaFiles.length === 0) {
+    warnings.push("No Lua files found");
+  }
+
+  // Check for duplicate GUIDs if comparing against other mods
+  const allMods = await listMods();
+  for (const mod of allMods) {
+    if (mod.id !== modGuid && mod.id === modJson?.doNotChangeVariablesBelowThis?.guid?.serializedGuid) {
+      errors.push(`GUID conflict: GUID already used by mod "${mod.name}"`);
+    }
+  }
+
+  return {
+    errors,
+    warnings,
+    isValid: errors.length === 0
+  };
+}
+
+async function createModBackup(modGuid) {
+  const { modsRoot } = await ensureWorkspace();
+  const modPaths = getModPaths(modsRoot, modGuid);
+  const backupRoot = path.join(modPaths.basePath, "backups");
+  
+  try {
+    await fs.mkdir(backupRoot, { recursive: true });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
+    const backupPath = path.join(backupRoot, `backup-${timestamp}`);
+    
+    if (await pathExists(modPaths.unpackPath)) {
+      const script = `
+        Copy-Item -LiteralPath '${escapePowerShellString(modPaths.unpackPath)}' -Destination '${escapePowerShellString(backupPath)}' -Recurse -Force
+      `;
+      await runPowerShell(script);
+      return { success: true, backupPath };
+    }
+    
+    return { success: false, error: "Unpack folder not found" };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 async function startModsWatcher() {
   const paths = await ensureWorkspace();
 
@@ -826,6 +904,8 @@ ipcMain.handle("mods:get-localmodinfo", async () => loadLocalModInfo());
 ipcMain.handle("app:read-settings", async () => readSettings());
 ipcMain.handle("app:save-settings", async (_event, settings) => saveSettings(settings));
 ipcMain.handle("app:list-languages", async () => listLanguagePacks());
+ipcMain.handle("mods:validate", async (_event, modGuid) => validateMod(modGuid));
+ipcMain.handle("mods:backup", async (_event, modGuid) => createModBackup(modGuid));
 
 // Window control handlers
 ipcMain.handle("app:minimize", () => {

@@ -57,9 +57,12 @@ const translations = {
     // Settings
     settings_title: "Settings",
     settings_language: "Language",
+    settings_autosave: "Auto-save",
+    settings_autosave_hint: "(Saves every 5 minutes)",
+    settings_save: "Save",
+    settings_close: "Close",
     settings_language_en: "English",
     settings_language_ru: "Русский",
-    settings_save: "Save Settings",
     
     // Status messages
     status_success: "Operation completed successfully",
@@ -132,9 +135,12 @@ const translations = {
     // Настройки
     settings_title: "Настройки",
     settings_language: "Язык",
+    settings_autosave: "Автосохранение",
+    settings_autosave_hint: "(Сохраняет каждые 5 минут)",
+    settings_save: "Сохранить",
+    settings_close: "Закрыть",
     settings_language_en: "English",
     settings_language_ru: "Русский",
-    settings_save: "Сохранить настройки",
     
     // Сообщения статуса
     status_success: "Операция выполнена успешно",
