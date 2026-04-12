@@ -1,0 +1,46 @@
+{
+  "name": "mdrg-modtools-ide",
+  "version": "1.2.8",
+  "description": "IDE for My Dystopian Robot Girlfriend mods",
+  "author": "Xoomat",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --launch-key=76vDS0AHUpdLOwqa3RYCkpdaHIOJVI61wj5ejdUz8bmzddNPU9dbOsoIcDUUaZbKtaRGnTGDwmJflfap7rHB3FV9Cy8hlPJR6bRN",
+    "dev": "electron . --launch-key=76vDS0AHUpdLOwqa3RYCkpdaHIOJVI61wj5ejdUz8bmzddNPU9dbOsoIcDUUaZbKtaRGnTGDwmJflfap7rHB3FV9Cy8hlPJR6bRN",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^36.2.1",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "com.xoomat.mdrg-modtools-ide",
+    "productName": "modtools",
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "main.js",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
